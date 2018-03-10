@@ -1,6 +1,12 @@
 {
     "presets": [
         ["env", {
+            "targets": {
+                "chrome": 58,
+                "safari": 9,
+                "ie": 11,
+                "firefox": 60
+            },
             "modules": false,
             "useBuiltIns": true,
             "debug": true
