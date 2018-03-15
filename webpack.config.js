@@ -42,13 +42,16 @@ module.exports = env => ({
     plugins: [
         // new UglifyJsPlugin(),
         new HtmlWebpackPlugin({template: './index.html'}),
-        new CopyWebpackPlugin([
-            {
-                from: 'src/assets/**/*',
-                to: '[folder]_[name].[ext]',
-                test: /([^/]+)\/(.+)\.png$/
-            }
-        ], {ignore: [ '*.js', '*.css' ]}),
-        new CopyAndFlattenPlugin()
+        new CopyAndFlattenPlugin({
+            dir: 'src/assets',
+            type: 'flatten'
+        })
+        // new CopyWebpackPlugin([
+        //     {
+        //         from: 'src/assets/**/*',
+        //         to: '[folder]_[name].[ext]',
+        //         test: /([^/]+)\/(.+)\.png$/
+        //     }
+        // ], {ignore: [ '*.js', '*.css' ]})
     ]
 });
