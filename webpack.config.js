@@ -5,6 +5,8 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 const CopyAndFlattenPlugin = require('./plugins/copy-and-flatten.js')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 
+var ImageminPlugin = require('imagemin-webpack-plugin').default
+
 module.exports = env => ({
     entry: {
         app: ['./src/app.js']
@@ -28,7 +30,6 @@ module.exports = env => ({
     resolve: {
         modules: [ 'node_modules' ]
     },
-    devtool: 'source-map',
     devServer: {
         proxy: {
             '/api': 'http://localhost:3000'
@@ -40,18 +41,14 @@ module.exports = env => ({
         historyApiFallback: true,
     },
     plugins: [
-        // new UglifyJsPlugin(),
         new HtmlWebpackPlugin({template: './index.html'}),
         new CopyAndFlattenPlugin({
             dir: 'src/assets',
             type: 'flatten'
+        }),
+        new ImageminPlugin({
+            disable: !env.production,
+            test: /\.(jpe?g|png|gif|svg)$/i
         })
-        // new CopyWebpackPlugin([
-        //     {
-        //         from: 'src/assets/**/*',
-        //         to: '[folder]_[name].[ext]',
-        //         test: /([^/]+)\/(.+)\.png$/
-        //     }
-        // ], {ignore: [ '*.js', '*.css' ]})
     ]
 });

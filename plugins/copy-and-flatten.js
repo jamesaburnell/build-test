@@ -1,66 +1,82 @@
 const chalk = require('chalk')
-const pluginUtils = require('./plugin-utils')
 const path = require('path')
+const Promise = require('bluebird')
 const fs = require('fs')
+const mkdirp = require('mkdirp')
+const { 
+	existsSync,
+	readdirSync,
+	statSync,
+	readFileSync,
+	writeFileSync,
+	mkdirSync
+} = require('fs')
+
+// const statAsync = Promise.promisify(fs.stat)
+// const readdirAsync = Promise.promisify(fs.readdir)
+// const readFileAsync = Promise.promisify(fs.readFile)
+// const writeFileAsync = Promise.promisify(fs.writeFile)
+// const mkdirpAsync = Promise.promisify(mkdirp)
+
 
 class CopyAndFlattenPlugin {
 
-	constructor({dir, type = "flatten"}) {
-		this.type = type
+	constructor({dir, skip = [], optimize}) {
 		this.dir = dir
+		this.skip = ['.DS_Store'].concat(skip)
+		this.optimize = optimize
 	}
 	
 	apply(compiler) {
-        /**
-         * @param {CompilerParams} params - params holds the default module factories as well 
-         * as compilation dependencies in a single object
-         * @param {Function} callback - callback to inform the compiler to continue
-         * @description "before-compile" - This purpose of this hook is to perform functionality before the `compiler` hook has executed and is run. 
-         * Examples of things that are done within webpack source for this hook include storing files (See DllReferencePlugin:22). 
-         * 
-         */
+		compiler.hooks.compilation.tap(this.constructor.name, compilation => {
+			if(!existsSync(compiler.outputPath)) mkdirSync(compiler.outputPath)
+		})
+		compiler.hooks.emit.tap(this.constructor.name, compilation => {
+			this.copyAssets(compilation, compiler.outputPath)
+		})
 
-		// this.assetPath = path.resolve(__dirname, this.dir)
-		console.log('\n\n\n')
-		console.log(chalk.green('props: '), this)
-		console.log('\n\n\n')
-		console.log(chalk.green('asset path: '), path.resolve(__dirname, this.dir))
-		// compiler.outputFileSystem.writeFile('readme.md')
+	}
 
+	copyAssets(compilation, outputPath) {
+		const inputPath = path.join(process.cwd(), this.dir)
 
-        compiler.hooks.beforeCompile.tap('before-compile', (params) => {
-            const {normalModuleFactory, contextModuleFactory} = params;
-            const foo = "DO SOMETHING AND SET IT UP BEFORE COMPILE STEP";
-			params.foo = foo;
-			// console.log('params: ', params)
-			console.log('\n\n\n')
-			console.log(chalk.green('Compiler props in before-compile:'))
-			for(let key in compiler){
-				console.log(key)
+		const write = file => {
+			let data = readFileSync(file),
+				name = this.getFlattenedFileName(file)
+			
+			writeFileSync(path.resolve(outputPath, name), data)
+			compilation.assets[name] = {
+				source: () => data,
+				size: () => data.length
 			}
-			console.log('\n\n\n')
-			console.log(chalk.green('input fileSystem in before compile: '), compiler.inputFileSystem._readFileStorage)
-			console.log('\n\n\n')
-			console.log(chalk.green('compiler output path in before compile: '), compiler.outputPath)
-			console.log('\n\n\n')
-            pluginUtils.logPluginEvent(`before-compile ${foo}`, "CompilerWebpackPlugin", "bgGreen", "magenta", "white");
-            // pluginUtils.logPluginEvent(`compiler:before-compile:Param Added:Params: -- ${Object.keys(params)}`, "CompilerWebpackPlugin", "bgGreen", "magenta", "white");
-        });
-
-
-        compiler.hooks.afterCompile.tap("after-compile", compilation => {
-			console.log('\n\n\n')
-			console.log(chalk.yellow('Compiler props in after-compile:'))
-			for(let key in compiler){
-				console.log(key)
-			}
-			console.log('\n\n\n')
-			console.log(chalk.yellow('compiler output path in after compile: '), compiler.outputPath)
-			console.log('\n\n\n')
-		});
+		}
 		
+		const walk = directory => {
+			let contents = readdirSync(directory)
+			contents.forEach(e => {
+				let file = path.resolve(directory, e),
+					stat = statSync(file)
+				
+				if(stat && stat.isDirectory()) walk(file)
+				else if (this.shouldCopyFile(file)) write(file)
+			})
+		}
 
-    }
+		try { walk(inputPath) } 
+		catch (err) { throw new Error(err) }
+	}
+
+	getFlattenedFileName(file) {
+		return file.split(this.dir)[1].split('/').join('_').substr(1)
+	}
+
+	shouldCopyFile(file) {
+		for(let i = 0; i < this.skip.length; i++) {
+			if(RegExp(this.skip[i]).test(file)) return false
+		}
+		return true
+	}
+
 }
 
 module.exports = CopyAndFlattenPlugin
