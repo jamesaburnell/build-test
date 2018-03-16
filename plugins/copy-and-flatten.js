@@ -3,21 +3,13 @@ const path = require('path')
 const Promise = require('bluebird')
 const fs = require('fs')
 const mkdirp = require('mkdirp')
-const { 
-	existsSync,
-	readdirSync,
-	statSync,
-	readFileSync,
-	writeFileSync,
-	mkdirSync
-} = require('fs')
 
-// const statAsync = Promise.promisify(fs.stat)
-// const readdirAsync = Promise.promisify(fs.readdir)
-// const readFileAsync = Promise.promisify(fs.readFile)
-// const writeFileAsync = Promise.promisify(fs.writeFile)
-// const mkdirpAsync = Promise.promisify(mkdirp)
-
+const { existsSync } = fs
+const statAsync = Promise.promisify(fs.stat)
+const readdirAsync = Promise.promisify(fs.readdir)
+const readFileAsync = Promise.promisify(fs.readFile)
+const writeFileAsync = Promise.promisify(fs.writeFile)
+const mkdirpAsync = Promise.promisify(mkdirp)
 
 class CopyAndFlattenPlugin {
 
@@ -32,39 +24,51 @@ class CopyAndFlattenPlugin {
 			if(!existsSync(compiler.outputPath)) mkdirSync(compiler.outputPath)
 		})
 		compiler.hooks.emit.tap(this.constructor.name, compilation => {
-			this.copyAssets(compilation, compiler.outputPath)
+			this.copyAssets(compilation, compiler.outputPath) 
 		})
 
 	}
 
-	copyAssets(compilation, outputPath) {
-		const inputPath = path.join(process.cwd(), this.dir)
+	async copyAssets(compilation, outputPath) {
+		return new Promise((resolve, reject) => {
 
-		const write = file => {
-			let data = readFileSync(file),
-				name = this.getFlattenedFileName(file)
+		})
+		const inputPath = path.join(process.cwd(), this.dir)
+		
+		const write = async file => {
 			
-			writeFileSync(path.resolve(outputPath, name), data)
+			let data = await readFileAsync(file)
+			let	name = this.getFlattenedFileName(file)
+			
+			await writeFileAsync(path.resolve(outputPath, name), data)
+
 			compilation.assets[name] = {
 				source: () => data,
 				size: () => data.length
 			}
+
 		}
 		
-		const walk = directory => {
-			let contents = readdirSync(directory)
-			contents.forEach(e => {
-				let file = path.resolve(directory, e),
-					stat = statSync(file)
+		const walk = async directory => {
+			let contents = await readdirAsync(directory)
+
+			contents.forEach(async e => {
+
+				let file = path.resolve(directory, e)
+				let	stat = await statAsync(file)
 				
 				if(stat && stat.isDirectory()) walk(file)
 				else if (this.shouldCopyFile(file)) write(file)
+
 			})
+
 		}
 
 		try { walk(inputPath) } 
 		catch (err) { throw new Error(err) }
 	}
+
+
 
 	getFlattenedFileName(file) {
 		return file.split(this.dir)[1].split('/').join('_').substr(1)

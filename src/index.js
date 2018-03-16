@@ -13,7 +13,7 @@ class App {
         if(arr.includes('asuh')){
             node.innerHTML = a
         } 
-        else {
+        else { //hey
             node.innerHTML = "not found in array"
         }
     }

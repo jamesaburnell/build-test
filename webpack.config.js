@@ -45,10 +45,11 @@ module.exports = env => ({
         new CopyAndFlattenPlugin({
             dir: 'src/assets',
             type: 'flatten'
-        }),
-        new ImageminPlugin({
-            disable: !env.production,
-            test: /\.(jpe?g|png|gif|svg)$/i
         })
     ]
 });
+ // ,
+        // new ImageminPlugin({
+        //     disable: !env.production,
+        //     test: /\.(jpe?g|png|gif|svg)$/i
+        // })
